@@ -1,0 +1,169 @@
+apiVersion: weblogic.oracle/v9
+kind: Domain
+metadata:
+  name: sample-domain1
+  namespace: sample-domain1-ns
+  labels:
+    weblogic.domainUID: sample-domain1
+spec:
+
+  domainHome: /shared/domains/AmenAll
+  domainHomeSourceType: PersistentVolume
+  image: weblogic-amen-fixed:1.0
+  
+
+  webLogicCredentialsSecret:
+    name: sample-domain1-weblogic-credentials
+
+  includeServerOutInPodLog: true
+  serverStartPolicy: IfNeeded
+
+
+
+  
+  serverPod:
+    env:
+      - name: JAVA_OPTIONS
+        value: "-Dweblogic.StdoutDebugEnabled=false -Dweblogic.SituationalConfig.failBootOnError=false"
+      - name: USER_MEM_ARGS
+        value: "-Djava.security.egd=file:/dev/./urandom -Xms512m -Xmx1024m"
+
+    resources:
+      requests:
+        cpu: "250m"
+        memory: "512Mi"
+      limits:
+        cpu: "1"
+        memory: "1Gi"
+
+    tolerations:
+      - key: "node.kubernetes.io/not-ready"
+        operator: "Exists"
+        effect: "NoExecute"
+        tolerationSeconds: 30
+      - key: "node.kubernetes.io/unreachable"
+        operator: "Exists"
+        effect: "NoExecute"
+        tolerationSeconds: 30
+
+    volumes:
+      - name: weblogic-domain-storage
+        persistentVolumeClaim:
+          claimName: sample-domain1-pvc
+    volumeMounts:
+      - mountPath: /shared
+        name: weblogic-domain-storage
+        readOnly: false
+
+    
+    affinity:
+      podAntiAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchExpressions:
+                - key: weblogic.domainUID
+                  operator: In
+                  values:
+                    - sample-domain1
+                - key: weblogic.clusterName
+                  operator: Exists
+            topologyKey: kubernetes.io/hostname
+
+    startupProbe:
+      exec:
+        command:
+          - /weblogic-operator/scripts/livenessProbe.sh
+      initialDelaySeconds: 60
+      periodSeconds: 10
+      timeoutSeconds: 15
+      failureThreshold: 30
+      successThreshold: 1
+
+    livenessProbe:
+      exec:
+        command:
+          - /weblogic-operator/scripts/livenessProbe.sh
+      initialDelaySeconds: 120
+      periodSeconds: 20
+      timeoutSeconds: 15
+      failureThreshold: 3
+      successThreshold: 1
+
+    readinessProbe:
+      exec:
+        command:
+          - /weblogic-operator/scripts/livenessProbe.sh
+      initialDelaySeconds: 90
+      periodSeconds: 15
+      timeoutSeconds: 10
+      failureThreshold: 6
+      successThreshold: 1
+
+
+  adminServer:
+    serverStartPolicy: Always
+
+    serverPod:
+      resources:
+        requests:
+          cpu: "500m"
+          memory: "1Gi"
+        limits:
+          cpu: "2"
+          memory: "2Gi"
+
+      tolerations:
+        - key: "node.kubernetes.io/not-ready"
+          operator: "Exists"
+          effect: "NoExecute"
+          tolerationSeconds: 30
+        - key: "node.kubernetes.io/unreachable"
+          operator: "Exists"
+          effect: "NoExecute"
+          tolerationSeconds: 30
+
+      startupProbe:
+        exec:
+          command:
+            - /weblogic-operator/scripts/livenessProbe.sh
+        initialDelaySeconds: 60
+        periodSeconds: 10
+        timeoutSeconds: 15
+        failureThreshold: 30
+        successThreshold: 1
+
+      livenessProbe:
+        exec:
+          command:
+            - /weblogic-operator/scripts/livenessProbe.sh
+        initialDelaySeconds: 120
+        periodSeconds: 20
+        timeoutSeconds: 15
+        failureThreshold: 3
+        successThreshold: 1
+
+      readinessProbe:
+        exec:
+          command:
+            - /weblogic-operator/scripts/livenessProbe.sh
+        initialDelaySeconds: 90
+        periodSeconds: 15
+        timeoutSeconds: 10
+        failureThreshold: 6
+        successThreshold: 1
+
+    adminService:
+      channels:
+        - channelName: default
+          nodePort: 30701
+
+ 
+  # 🌐 LISTE DES 27 CLUSTERS
+  
+  clusters:
+    - name: sample-domain1-cluster-xxxxx
+    - name: sample-domain1-cluster-xxxxx
+
+   
